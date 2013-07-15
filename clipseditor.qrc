@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>lang/qt_ru.qm</file>
+        <file>help/clipshelp.qch</file>
+        <file>help/clipshelp.qhc</file>
+        <file>lang/clipseditor_ru.qm</file>
+    </qresource>
+</RCC>

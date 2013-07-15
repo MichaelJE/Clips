@@ -1,0 +1,82 @@
+﻿void CodeEditor::foldManager(QTextBlock& block)
+{
+    int state = block.userState();
+
+    if (state & Error || state & End || !(state & Begin) || // (state & End) для однострочного блока ()
+        doc->lastBlock().blockNumber() == block.blockNumber())
+        return;
+
+    bool folding = !(state & Folded);
+
+    if (folding) {
+        fold(block);
+    } else {
+        unfold(block);
+    }
+
+}
+
+void CodeEditor::fold(QTextBlock& block) {
+    int previousBlockState = block.previous().userState();
+    int endBraceDepth = previousBlockState & Error ? 0 : previousBlockState >> StateShift;
+
+    int braceDepth;// = 0;
+
+    block.setUserState(block.userState() | Folded);
+
+    while ((block = block.next()).isValid()) {
+        int state = block.userState();
+
+        braceDepth = state >> StateShift;
+
+        block.setVisible(false);
+
+        //qDebug() << "Fold [" << block.blockNumber() << "]: depth " << braceDepth << "/" << endBraceDepth;
+
+        if (braceDepth <= endBraceDepth)
+            break;
+    }
+}
+
+void CodeEditor::unfold(QTextBlock& block) {
+    int previousBlockState = block.previous().userState();
+    int endBraceDepth = previousBlockState & Error ? 0 : previousBlockState >> StateShift;
+
+    int braceDepth;// = 0;
+    int skipBraceDepth = 0;
+
+    block.setUserState(block.userState() & ~Folded);
+
+    while ((block = block.next()).isValid()) {
+
+        int state = block.userState();
+        braceDepth = state >> StateShift;
+
+        //qDebug() << "Unfold [" << block.blockNumber() << "]: depth " << braceDepth << "/" << endBraceDepth;
+
+        if (state & Begin) {
+
+            if (!skipBraceDepth && state & Folded) {
+                skipBraceDepth = block.previous().userState() >> StateShift;
+
+                //qDebug() << "\tSkip depth " << skipBraceDepth;
+
+                goto SKIP; // отобразить начало вложенного блока
+            }
+        }
+
+        if (skipBraceDepth) {
+            //qDebug() << "\tSkip";
+
+            if (braceDepth == skipBraceDepth)
+                skipBraceDepth = 0;
+
+            continue;
+        }
+SKIP:
+        block.setVisible(true);
+
+        if (braceDepth <= endBraceDepth)
+            break;
+    }
+}
